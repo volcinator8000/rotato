@@ -196,14 +196,14 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 
 let S = Object.assign({}, BOOT.defaults);
 try {
-  const saved = JSON.parse(localStorage.getItem('sd.settings') || '{}');
+  const saved = JSON.parse(localStorage.getItem('sd.settings.v2') || '{}');
   for (const k in saved) if (k in S && isFinite(saved[k])) S[k] = Number(saved[k]);
 } catch (e) {}
 let rVal = null;        // null = largest pin distance that fits
 let pos = 0.5;          // 0..1 along the used stroke
 let st = null, tb = null, tablesStale = true, tab = 'dist';
 
-function save() { try { localStorage.setItem('sd.settings', JSON.stringify(S)); } catch (e) {} }
+function save() { try { localStorage.setItem('sd.settings.v2', JSON.stringify(S)); } catch (e) {} }
 function params(extra) {
   const p = new URLSearchParams();
   for (const item of SET) p.set(item[0], S[item[0]]);
@@ -345,11 +345,11 @@ function draw() {
   if (dims) {
     o.push('<line class="dim" x1="0" y1="-1.2" x2="' + BOX + '" y2="-1.2"/><text class="dtext" x="' + (BOX / 2) + '" y="-1.6" text-anchor="middle">' + f2(BOX) + ' cm box</text>');
     const ox = BOX - 1.0;
-    o.push('<line class="dim" x1="' + ox + '" y1="' + Y(cy) + '" x2="' + ox + '" y2="' + Y(ry) + '"/><text class="dtext" x="' + (ox - 0.3) + '" y="' + Y(ry + 2.8) + '" text-anchor="end">offset ' + f2(s.OFFSET) + '</text>');
+    o.push('<line class="dim" x1="' + ox + '" y1="' + Y(cy) + '" x2="' + ox + '" y2="' + Y(ry) + '"/><text class="dtext" transform="translate(' + (ox - 0.3) + ' ' + Y((cy + ry) / 2) + ') rotate(-90)" text-anchor="middle">offset ' + f2(s.OFFSET) + '</text>');
     o.push('<line class="dim" x1="' + st.xs + '" y1="' + (BOX + 1.4) + '" x2="' + st.xe + '" y2="' + (BOX + 1.4) + '"/><text class="dtext" x="' + ((st.xs + st.xe) / 2) +
       '" y="' + (BOX + 2.6) + '" text-anchor="middle">stroke ' + f2(st.stroke) + ' cm · ' + f2(st.sweep_pct, 1) + ' %</text>');
     o.push('<text class="dtext" x="' + (W + 0.5) + '" y="' + (W + 1.7) + '">disk R' + f2(R) + '</text>');
-    o.push('<text class="dtext" x="' + (cx - 0.6) + '" y="' + (Y(cy) - st.r - 0.5) + '" text-anchor="end">pin r ' + f2(st.r) + '</text>');
+    o.push('<text class="dtext" x="' + (cx - st.bar.w / 2 - 0.6) + '" y="' + (Y(cy) - st.r - 0.5) + '" text-anchor="end">pin r ' + f2(st.r) + '</text>');
     o.push('<text class="dtext" x="' + (BOX / 2) + '" y="' + (BOX + 4.6) + '" text-anchor="middle">disk centre ' + f2(cx) + ' , ' + f2(cy) + ' from the bottom-left corner</text>');
   }
   const svg = $('svg');

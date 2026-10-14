@@ -23,8 +23,8 @@ const SETTINGS = [
   ['BLOCK', 'cm   carriage block size'],
 ];
 const DEFAULTS = {
-  TRAVEL: 28, DISK_RADIUS: 13.5, OFFSET: 15, SLOT_LEN: 20, SLOT_W: 0.5, EDGE: 1,
-  SLOT_ANGLE: 70, SWEEP: 180, START: -90, BOX: 31, WALL: 0.5, BLOCK: 3,
+  TRAVEL: 28, DISK_RADIUS: 14, OFFSET: 13, SLOT_LEN: 20, SLOT_W: 0.5, EDGE: 1,
+  SLOT_ANGLE: 90, SWEEP: 180, START: -90, BOX: 31, WALL: 0.5, BLOCK: 3,
 };
 
 // Same constants as Python's math.radians / math.degrees (multiply by a precomputed factor).
@@ -82,7 +82,7 @@ function parseSettings(S) {
     const v = vals[name];
     let ok;
     if (name === 'WALL') ok = v >= 0;
-    else if (name === 'SLOT_ANGLE') ok = v > 0 && v < 90;
+    else if (name === 'SLOT_ANGLE') ok = v > 0 && v <= 90;
     else if (name === 'SWEEP') ok = v > 0 && v <= 180;
     else ok = v > 0;
     if (!ok) throw new Error(name + ' is out of range');
@@ -123,16 +123,20 @@ function Engine(P) {
   function geom(r) {
     const cr = cRange(r), c1 = cr[0], c2 = cr[1];
     const sr = slotRange(r), lo = sr[0], hi = sr[1];
-    const mid = (lo + hi) / 2.0;
+    // hollow sits as close to the carriage as it can (shortest bar), but not inside the carriage block
+    const floor = P.BLOCK / 2 + P.EDGE;
+    let ss = hi + P.SLOT_W / 2 - P.SLOT_LEN;
+    if (ss < floor) ss = Math.min(floor, lo - P.SLOT_W / 2);
     return {
       c1: c1, c2: c2,
       stroke: (c2 - c1) / sa,
       xr1: (c1 - P.OFFSET * ca) / sa,
       xr2: (c2 - P.OFFSET * ca) / sa,
       lo: lo, hi: hi, span: hi - lo,
-      slot_start: mid - P.SLOT_LEN / 2.0,
-      slot_end: mid + P.SLOT_LEN / 2.0,
-      bar_len: mid + P.SLOT_LEN / 2.0 + P.EDGE,
+      slot_start: ss,
+      slot_end: ss + P.SLOT_LEN,
+      bar_len: ss + P.SLOT_LEN + P.EDGE,
+      floor: floor,
       bar_w: P.SLOT_W + 2 * P.EDGE,
     };
   }
@@ -203,6 +207,7 @@ function Engine(P) {
     if (g.stroke > P.TRAVEL + 1e-9) out.push('needs ' + fx(g.stroke, 2) + ' cm of carriage travel, only ' + fx(P.TRAVEL, 2) + ' cm available');
     if (g.span > pinTravel + 1e-9) out.push('pin needs ' + fx(g.span, 2) + ' cm of slot travel, slot only gives ' + fx(pinTravel, 2) + ' cm');
     if (r > P.DISK_RADIUS - P.SLOT_W + 1e-9) out.push('pin sits outside the disk (radius ' + fx(P.DISK_RADIUS, 2) + ' cm)');
+    if (g.slot_start < g.floor - 1e-9) out.push('hollow runs into the carriage block (starts ' + fx(g.slot_start, 2) + ' cm from the carriage dot, needs at least ' + fx(g.floor, 2) + ')');
     const lay = layout(r);
     if (!lay.ok) out.push('does not fit the ' + fx(P.BOX, 0) + ' cm box: ' + lay.worst + ' is ' + fx(-lay.margin, 2) + ' cm too far out');
     return out;
@@ -299,6 +304,12 @@ function Engine(P) {
       '  pin slot travel used ... ' + fx(g.span, 2) + ' of ' + fx(pinTravel, 2) + ' cm',
       '  closest to a wall ...... ' + fx(lay.margin + P.WALL, 2) + ' cm (' + lay.worst + ')',
     ];
+    const under = (railY + P.BLOCK / 2) - (cy - P.DISK_RADIUS);
+    if (under > 1e-9) {
+      lines.push('');
+      lines.push('NOTE: the disk reaches ' + fx(under, 2) + ' cm under the rail / carriage strip.');
+      lines.push('  Mount the rail on raised end supports so the carriage and bar ride above the disk.');
+    }
     const w = warningsFor(r);
     if (w.length) {
       lines.push('');
@@ -385,12 +396,12 @@ function Engine(P) {
     o.push('<line x1="0" y1="0" x2="' + fx(P.DISK_RADIUS * Math.cos(rad(20)), 2) + '" y2="' + fx(Y(P.DISK_RADIUS * Math.sin(rad(20))), 2) + '"/>');
     o.push('</g></g>');
     o.push('<g fill="#222">');
-    o.push('<text x="10.4" y="' + fx(Y(-P.OFFSET * 0.5), 2) + '">offset ' + fx(P.OFFSET, 1) + '</text>');
+    o.push('<text x="9.6" y="' + fx(Y(-P.OFFSET * 0.5), 2) + '" text-anchor="end">offset ' + fx(P.OFFSET, 1) + '</text>');
     o.push('<text x="' + fx((g.xr1 + g.xr2) / 2, 2) + '" y="' + fx(Y(by0) + 2.6, 2) + '" text-anchor="middle" fill="#2980b9">stroke ' +
       fx(stroke, 2) + ' cm = ' + fx(stroke / P.TRAVEL * 100, 1) + ' % of ' + fx(P.TRAVEL, 0) + '</text>');
     o.push('<text x="' + fx(P.DISK_RADIUS * 0.5 * Math.cos(rad(20)), 2) + '" y="' + fx(Y(P.DISK_RADIUS * 0.5 * Math.sin(rad(20))) - 0.4, 2) +
       '">R' + fx(P.DISK_RADIUS, 1) + '</text>');
-    o.push('<text x="-0.7" y="' + fx(-r - 0.4, 2) + '" fill="#c0392b" text-anchor="end">pin r = ' + fx(r, 2) + '</text>');
+    o.push('<text x="' + fx(-(g.bar_w / 2 + 0.5), 2) + '" y="' + fx(-r - 0.4, 2) + '" fill="#c0392b" text-anchor="end">pin r = ' + fx(r, 2) + '</text>');
     o.push('<text x="' + fx(g.xr1, 2) + '" y="' + fx(Y(railY) - P.BLOCK / 2 - 0.4, 2) + '" fill="#2980b9" text-anchor="middle">start</text>');
     o.push('<text x="' + fx(g.xr2, 2) + '" y="' + fx(Y(railY) - P.BLOCK / 2 - 0.4, 2) + '" fill="#2980b9" text-anchor="middle">end</text>');
     o.push('<text x="' + fx(bx1, 2) + '" y="' + fx(Y(by0) + 2.6, 2) + '" font-size="0.8" fill="#555" text-anchor="end">box ' +
@@ -570,9 +581,11 @@ function Engine(P) {
     const ex_ = dx + pts.end[0], ey_ = dy - pts.end[1];
     o.push('<path d="M' + fx(sx_, 2) + ' ' + fx(sy_, 2) + ' A' + fx(r, 2) + ' ' + fx(r, 2) + ' 0 ' + (P.SWEEP > 180 ? 1 : 0) + ' 1 ' + fx(ex_, 2) + ' ' + fx(ey_, 2) +
       '" fill="none" stroke="#c0392b" stroke-width="0.18" marker-end="url(#ae)"/>');
-    for (const q of [['start', [-0.6, -0.8]], ['end', [0.6, 1.4]], ['mid', [0.6, -0.8]]]) {
-      const pp = pts[q[0]], off = q[1];
-      text(dx + pp[0] + off[0], dy - pp[1] + off[1], q[0] + ' ' + fx(pp[2], 1) + ' deg', { size: 0.75, col: '#c0392b', anchor: off[0] < 0 ? 'end' : 'start' });
+    for (const name of ['start', 'end', 'mid']) {
+      // label just inside the pin circle, pointing at the pin
+      const pp = pts[name], th = rad(pp[2]), ux = Math.cos(th), uy = Math.sin(th);
+      const lx = dx + pp[0] - 1.0 * ux, ly = dy - pp[1] + 1.0 * uy + 0.25 + (uy < -0.5 ? 0.5 : 0);
+      text(lx, ly, name + ' ' + fx(pp[2], 1) + ' deg', { size: 0.75, col: '#c0392b', anchor: ux > 0.3 ? 'end' : (ux < -0.3 ? 'start' : 'middle') });
     }
     dimH(dx - P.DISK_RADIUS, dx + P.DISK_RADIUS, dy + P.DISK_RADIUS + 1.4, 'disk diameter ' + fx(2 * P.DISK_RADIUS, 2) + ' (R' + fx(P.DISK_RADIUS, 2) + ')', false);
     line(dx, dy, dx + r * Math.cos(rad(-70)), dy - r * Math.sin(rad(-70)), { w: 0.07, arrows: true });
