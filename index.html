@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slider / Disk calculator</title>
+<style id="maincss">
+:root{
+  --bg:#f2f0e8; --panel:#fbfaf6; --ink:#1c2430; --muted:#6a7280; --line:#dcd8cb; --grid:#e8e4d7;
+  --accent:#c2392b; --carriage:#f1c84b; --bar:#cdd5da; --blue:#2c7db3; --disk:#ffffff; --box:#f7f6f0;
+  --ok:#2b7a4b; --warn:#b36b00; --bad:#b3261e;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0f141b; --panel:#171e28; --ink:#e7eaf0; --muted:#93a0b3; --line:#2b3441; --grid:#1d2631;
+    --accent:#ff6f61; --carriage:#d9a92f; --bar:#3a4655; --blue:#5aaae8; --disk:#1a222d; --box:#121921;
+    --ok:#52c283; --warn:#e0a23a; --bad:#ff7b72;
+  }
+}
+*{box-sizing:border-box}
+html{color-scheme:light dark}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;max-width:1320px;margin:0 auto;padding:18px 24px 0}
+h1{font-size:20px;margin:0;letter-spacing:.2px}
+h1 small{display:block;font-weight:400;color:var(--muted);font-size:13px;margin-top:2px}
+.badge{padding:7px 13px;border-radius:999px;font-size:13px;border:1px solid currentColor;display:inline-flex;gap:8px;align-items:center;max-width:100%}
+.badge.ok{color:var(--ok)} .badge.bad{color:var(--bad)}
+.badge i{width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block;flex:none}
+main{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:22px;max-width:1320px;margin:0 auto;padding:18px 24px 40px}
+@media (max-width:980px){main{grid-template-columns:1fr}}
+.stage{position:sticky;top:14px;align-self:start;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}
+@media (max-width:980px){.stage{position:static}}
+.toolbar{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:0 2px 8px}
+.toolbar label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+#svg{width:100%;height:auto;display:block;max-height:calc(100vh - 190px)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px;color:var(--muted)}
+.chip b{color:var(--ink);font-weight:600;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+.chip.warn b{color:var(--warn)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px;background:var(--c)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+.card h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 12px;font-weight:600}
+.pair{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:end}
+.swap{padding-bottom:12px;color:var(--muted);font-size:18px}
+label.f{display:block;font-size:12px;color:var(--muted)}
+.num{display:flex;align-items:baseline;gap:6px;border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:var(--bg);margin-top:4px}
+.num:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 22%,transparent)}
+.num input{border:0;background:transparent;color:var(--ink);font:600 19px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;width:100%;min-width:0;outline:none;font-variant-numeric:tabular-nums}
+.num em{font-style:normal;color:var(--muted);font-size:12px;white-space:nowrap}
+input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0 12px}
+.hint{font-size:12.5px;color:var(--muted);margin:10px 0 0}
+button{font:inherit;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:6px 11px;cursor:pointer}
+button:hover{border-color:var(--blue)}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs button.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+th{text-align:left;font-weight:500;color:var(--muted);font-size:12px;padding:4px 6px}
+td{padding:5px 6px;border-top:1px solid var(--line)}
+tr.row{cursor:pointer} tr.row:hover td{background:var(--bg)}
+tr.sel td{background:color-mix(in srgb,var(--accent) 13%,transparent)}
+.tag{padding:1px 8px;border-radius:999px;font-size:11px;border:1px solid currentColor}
+.tag.ok{color:var(--ok)} .tag.no{color:var(--bad)}
+details.card>summary{cursor:pointer;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+details.card[open]>summary{margin-bottom:12px}
+pre{margin:0;padding:12px;background:var(--bg);border:1px solid var(--line);border-radius:10px;overflow:auto;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre}
+.links{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.links a{font-size:13px;color:var(--blue);text-decoration:none;border:1px solid var(--line);border-radius:9px;padding:6px 11px;background:var(--bg)}
+.setgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.setgrid .num input{font-size:16px}
+.msg{border-radius:12px;padding:10px 12px;margin-bottom:14px;font-size:13px;border:1px solid}
+.msg.err{color:var(--bad);background:color-mix(in srgb,var(--bad) 9%,transparent)}
+.msg.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 9%,transparent)}
+.msg ul{margin:0;padding-left:18px}
+.rowbtns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+</style>
+<style id="svgcss">
+svg .boxfill{fill:var(--box)}
+svg .box{fill:none;stroke:var(--ink);stroke-width:.25}
+svg .box.bad{stroke:var(--bad)}
+svg .grid{stroke:var(--grid);stroke-width:.06}
+svg .wall{fill:none;stroke:var(--muted);stroke-width:.06;stroke-dasharray:.5 .4;opacity:.6}
+svg .disk{fill:var(--disk);stroke:var(--ink);stroke-width:.2}
+svg .ring{fill:none;stroke:var(--line);stroke-width:.07}
+svg .ring.nofit{stroke:var(--bad);stroke-dasharray:.25 .25;opacity:.55}
+svg .rlabel{font-size:.55px;fill:var(--muted)}
+svg .pinring{fill:none;stroke:var(--accent);stroke-width:.1;stroke-dasharray:.5 .35}
+svg .arc{fill:none;stroke:var(--accent);stroke-width:.22}
+svg .pointer{stroke:var(--accent);stroke-width:.08;stroke-dasharray:.3 .3}
+svg .rail{fill:var(--panel);stroke:var(--ink);stroke-width:.18}
+svg .ghost{fill:none;stroke:var(--blue);stroke-width:.1;stroke-dasharray:.4 .3}
+svg .ghostline{stroke:var(--blue);stroke-width:.07;stroke-dasharray:.4 .3}
+svg .carriage{fill:var(--carriage);stroke:var(--ink);stroke-width:.18}
+svg .bar{fill:var(--bar);fill-opacity:.9;stroke:var(--ink);stroke-width:.18;fill-rule:evenodd}
+svg .dot{fill:var(--ink)}
+svg .pin{fill:var(--accent)}
+svg .pin.warn{fill:var(--warn)}
+svg .dim{stroke:var(--muted);stroke-width:.07;fill:none}
+svg .dtext{font-size:.85px;fill:var(--muted)}
+svg .tick{stroke:var(--ink);stroke-width:.1;fill:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Slider / Disk calculator<small>Slanted slot on a sliding carriage turns a pin on the disk</small></h1>
+  <div id="badge" class="badge ok"><i></i><span>Loading...</span></div>
+</header>
+<main>
+  <section class="stage">
+    <div class="toolbar">
+      <label><input type="checkbox" id="tDims" checked> dimensions</label>
+      <label><input type="checkbox" id="tRings" checked> distance rings</label>
+      <label><input type="checkbox" id="tGhosts" checked> start / end positions</label>
+    </div>
+    <svg id="svg" viewBox="-4 -3.5 39 41" role="img" aria-label="Top view of the mechanism inside the box"></svg>
+    <div class="chips" id="chips"></div>
+    <div class="legend">
+      <span style="--c:var(--carriage)">carriage</span><span style="--c:var(--bar)">slotted bar</span>
+      <span style="--c:var(--accent)">pin / disk pointer</span><span style="--c:var(--blue)">start and end of the stroke</span>
+    </div>
+  </section>
+
+  <aside>
+    <div id="err" class="msg err" hidden></div>
+    <div id="warns" class="msg warn" hidden></div>
+
+    <div class="card">
+      <h2>1 &middot; Pin distance &#8644; slider travel</h2>
+      <div class="pair">
+        <div><label class="f" for="rIn">Pin distance from disk centre</label>
+          <div class="num"><input id="rIn" type="number" step="0.05" min="0"><em>cm</em></div></div>
+        <div class="swap">&#8644;</div>
+        <div><label class="f" for="needIn">Slider travel needed</label>
+          <div class="num"><input id="needIn" type="number" step="0.1" min="0"><em>% of full</em></div></div>
+      </div>
+      <p class="hint" id="h1"></p>
+      <div class="rowbtns"><button id="autoR">Use largest distance that fits</button></div>
+    </div>
+
+    <div class="card">
+      <h2>2 &middot; Slider movement &#8644; disk turns</h2>
+      <label class="f" for="scrub">Drag to move the slider (start to end of the stroke)</label>
+      <input type="range" id="scrub" min="0" max="1000" value="500">
+      <div class="pair">
+        <div><label class="f" for="pctIn">Slider moved</label>
+          <div class="num"><input id="pctIn" type="number" step="0.1" min="0"><em>% of full</em></div></div>
+        <div class="swap">&#8644;</div>
+        <div><label class="f" for="turnsIn">Disk turned</label>
+          <div class="num"><input id="turnsIn" type="number" step="0.01" min="0"><em>turns</em></div></div>
+      </div>
+      <p class="hint" id="h2"></p>
+    </div>
+
+    <div class="card">
+      <h2>3 &middot; Placing drawings on the disk</h2>
+      <div class="tabs">
+        <button data-tab="dist" class="on">By distance</button>
+        <button data-tab="pct">By slider %</button>
+      </div>
+      <div id="tbl"></div>
+      <p class="hint">Click a row to use that distance. A drawing placed at a distance gets its own slider travel; rows marked "no" do not fit the box or the slot.</p>
+    </div>
+
+    <details class="card">
+      <summary>Build numbers</summary>
+      <pre id="build"></pre>
+      <div class="links">
+        <a id="lnkSheet" href="#" target="_blank" rel="noopener">Open drawing sheet (SVG)</a>
+        <a id="lnkBox" href="#" target="_blank" rel="noopener">Open box schematic (SVG)</a>
+        <button id="copyBuild">Copy numbers</button>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary>Settings</summary>
+      <div class="setgrid" id="setgrid"></div>
+      <div class="rowbtns"><button id="resetSet">Reset to defaults</button></div>
+      <p class="hint">Settings are remembered in this browser. Everything is in cm and degrees.</p>
+    </details>
+  </aside>
+</main>
+
+<script src="core.js"></script>
+<script>
+(function () {
+'use strict';
+const BOOT = {defaults: SDCore.DEFAULTS, settings: SDCore.SETTINGS};
+const $ = id => document.getElementById(id);
+const SET = BOOT.settings;
+const LABELS = {TRAVEL:'Carriage travel (100 %)', DISK_RADIUS:'Disk radius', OFFSET:'Rail to disk centre',
+  SLOT_LEN:'Hollow length', SLOT_W:'Hollow width (pin diameter)', EDGE:'Material around hollow',
+  SLOT_ANGLE:'Slot angle to rail', SWEEP:'Disk turn over the stroke', START:'Sweep start phase',
+  BOX:'Box inside size', WALL:'Wall clearance', BLOCK:'Carriage block size'};
+const f2 = (v, d) => Number(v).toFixed(d === undefined ? 2 : d);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let S = Object.assign({}, BOOT.defaults);
+try {
+  const saved = JSON.parse(localStorage.getItem('sd.settings') || '{}');
+  for (const k in saved) if (k in S && isFinite(saved[k])) S[k] = Number(saved[k]);
+} catch (e) {}
+let rVal = null;        // null = largest pin distance that fits
+let pos = 0.5;          // 0..1 along the used stroke
+let st = null, tb = null, tablesStale = true, tab = 'dist';
+
+function save() { try { localStorage.setItem('sd.settings', JSON.stringify(S)); } catch (e) {} }
+function params(extra) {
+  const p = new URLSearchParams();
+  for (const item of SET) p.set(item[0], S[item[0]]);
+  if (rVal !== null) p.set('r', rVal);
+  for (const k in (extra || {})) p.set(k, extra[k]);
+  return p;
+}
+async function getJSON(path, extra) {
+  const e = extra || {};
+  if (path === '/api/state') return SDCore.apiState(S, rVal, e.pos);
+  if (path === '/api/tables') return SDCore.apiTables(S, rVal);
+  if (path === '/api/convert') return SDCore.apiConvert(S, e.kind, e.value, rVal);
+  throw new Error('unknown call ' + path);
+}
+function openSVG(kind) {
+  try {
+    const text = SDCore.exportSVG(kind, S, rVal);
+    const url = URL.createObjectURL(new Blob([text], {type: 'image/svg+xml'}));
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (e) { showError(e); }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  $('lnkSheet').addEventListener('click', ev => { ev.preventDefault(); openSVG('sheet'); });
+  $('lnkBox').addEventListener('click', ev => { ev.preventDefault(); openSVG('box'); });
+});
+function showError(e) { const m = e && e.message ? e.message : String(e); const el = $('err'); el.textContent = m; el.hidden = false; }
+function hideError() { $('err').hidden = true; }
+function setVal(id, v) { const el = $(id); if (document.activeElement !== el) el.value = v; }
+
+// ---- data flow -------------------------------------------------------
+let busy = false, again = false;
+function schedule() {
+  if (busy) { again = true; return; }
+  busy = true;
+  loadState().catch(showError).finally(() => { busy = false; if (again) { again = false; schedule(); } });
+}
+async function loadState() {
+  st = await getJSON('/api/state', {pos: pos});
+  hideError();
+  applyState();
+  if (tablesStale) { tablesStale = false; loadTables().catch(showError); }
+}
+async function loadTables() {
+  tb = await getJSON('/api/tables');
+  renderTables();
+  draw();
+}
+
+function applyState() {
+  for (const k in st.settings) {
+    S[k] = st.settings[k];
+    const el = $('set_' + k);
+    if (el && document.activeElement !== el) el.value = st.settings[k];
+  }
+  save();
+  setVal('rIn', f2(st.r));
+  setVal('needIn', f2(st.sweep_pct, 1));
+  setVal('pctIn', f2(st.pct, 1));
+  setVal('turnsIn', f2(st.turns, 3));
+  $('scrub').value = Math.round(Math.min(1, st.pos) * 1000);
+
+  $('h1').textContent = 'The carriage moves ' + f2(st.stroke) + ' cm (' + f2(st.sweep_pct, 1) + ' % of its ' + f2(S.TRAVEL, 1) +
+    ' cm travel) while the disk turns ' + f2(S.SWEEP, 0) + '°. Largest distance that fits the box: ' + f2(st.max_r) + ' cm.';
+  const deg = st.turns * 360;
+  $('h2').textContent = 'Slider position is counted from the start of the stroke. At ' + f2(st.pct, 1) + ' % the disk has turned ' +
+    f2(deg, 1) + '° (pin at ' + f2(st.ang, 1) + '° from the rail direction). Disk turns clockwise as the slider moves right.';
+
+  const chips = [
+    ['Slider', f2(st.stroke_cm) + ' cm · ' + f2(st.pct, 1) + ' %', false],
+    ['Disk', f2(st.turns, 3) + ' turn · ' + f2(deg, 1) + '°', false],
+    ['Pin', 'r ' + f2(st.r) + ' cm', false],
+    ['Slot travel', f2(st.span) + ' / ' + f2(st.span_avail) + ' cm', st.span > st.span_avail + 1e-9]
+  ];
+  if (!st.inside) chips.push(['Pin', 'has left the slot line', true]);
+  else if (!st.in_slot) chips.push(['Pin', 'outside the hollow', true]);
+  $('chips').innerHTML = chips.map(c => '<span class="chip' + (c[2] ? ' warn' : '') + '">' + c[0] + ' <b>' + esc(c[1]) + '</b></span>').join('');
+
+  const badge = $('badge');
+  if (st.fit.ok) {
+    badge.className = 'badge ok';
+    badge.innerHTML = '<i></i><span>Fits the ' + f2(S.BOX, 0) + ' × ' + f2(S.BOX, 0) + ' cm box</span>';
+  } else {
+    badge.className = 'badge bad';
+    badge.innerHTML = '<i></i><span>' + esc(st.fit.warnings[0]) + '</span>';
+  }
+  const msgs = [];
+  if (st.fit.warnings.length > 1) for (const w of st.fit.warnings.slice(1)) msgs.push(w);
+  for (const n of st.notes) msgs.push(n);
+  const wb = $('warns');
+  if (msgs.length) { wb.innerHTML = '<ul>' + msgs.map(m => '<li>' + esc(m) + '</li>').join('') + '</ul>'; wb.hidden = false; }
+  else wb.hidden = true;
+  draw();
+}
+
+// ---- drawing ---------------------------------------------------------
+function draw() {
+  if (!st) return;
+  const s = st.settings, BOX = s.BOX, R = s.DISK_RADIUS, A = s.SLOT_ANGLE, W = s.WALL, BL = s.BLOCK, SW = s.SLOT_W;
+  const cx = st.cx, cy = st.cy, ry = st.rail_y, Y = y => BOX - y;
+  const dims = $('tDims').checked, rings = $('tRings').checked, ghosts = $('tGhosts').checked;
+  const o = [];
+  o.push('<rect class="boxfill" x="0" y="0" width="' + BOX + '" height="' + BOX + '"/>');
+  for (let g = 5; g < BOX; g += 5) {
+    o.push('<line class="grid" x1="' + g + '" y1="0" x2="' + g + '" y2="' + BOX + '"/><line class="grid" x1="0" y1="' + g + '" x2="' + BOX + '" y2="' + g + '"/>');
+  }
+  o.push('<rect class="wall" x="' + W + '" y="' + W + '" width="' + (BOX - 2 * W) + '" height="' + (BOX - 2 * W) + '"/>');
+  o.push('<circle class="disk" cx="' + cx + '" cy="' + Y(cy) + '" r="' + R + '"/>');
+  if (rings && tb) {
+    for (const g of tb.rings) {
+      o.push('<circle class="ring' + (g.ok ? '' : ' nofit') + '" cx="' + cx + '" cy="' + Y(cy) + '" r="' + g.r + '"/>');
+      o.push('<text class="rlabel" x="' + (cx + g.r + 0.12) + '" y="' + (Y(cy) - 0.12) + '">' + g.r + '</text>');
+    }
+  }
+  o.push('<circle class="pinring" cx="' + cx + '" cy="' + Y(cy) + '" r="' + st.r + '"/>');
+  o.push('<path class="tick" d="M' + (cx - 0.8) + ' ' + Y(cy) + 'H' + (cx + 0.8) + 'M' + cx + ' ' + (Y(cy) - 0.8) + 'V' + (Y(cy) + 0.8) + '"/>');
+  const ps = st.pin_start, pn = st.pin;
+  if (st.turns > 0.002) {
+    o.push('<path class="arc" d="M' + ps.x + ' ' + Y(ps.y) + ' A' + st.r + ' ' + st.r + ' 0 ' + (st.turns > 0.5 ? 1 : 0) + ' 1 ' + pn.x + ' ' + Y(pn.y) + '"/>');
+  }
+  const th = st.ang * Math.PI / 180;
+  o.push('<line class="pointer" x1="' + cx + '" y1="' + Y(cy) + '" x2="' + (cx + R * Math.cos(th)) + '" y2="' + Y(cy + R * Math.sin(th)) + '"/>');
+  o.push('<rect class="rail" x="' + st.rail_left + '" y="' + (Y(ry) - 0.5) + '" width="' + s.TRAVEL + '" height="1"/>');
+  if (ghosts) {
+    for (const x of [st.xs, st.xe]) {
+      o.push('<rect class="ghost" x="' + (x - BL / 2) + '" y="' + (Y(ry) - BL / 2) + '" width="' + BL + '" height="' + BL + '"/>');
+    }
+    for (const q of [[st.xs, st.pin_start], [st.xe, st.pin_end]]) {
+      o.push('<line class="ghostline" x1="' + q[0] + '" y1="' + Y(ry) + '" x2="' + q[1].x + '" y2="' + Y(q[1].y) + '"/>');
+      o.push('<circle class="ghost" cx="' + q[1].x + '" cy="' + Y(q[1].y) + '" r="0.4"/>');
+    }
+  }
+  o.push('<rect class="carriage" x="' + (st.x_car - BL / 2) + '" y="' + (Y(ry) - BL / 2) + '" width="' + BL + '" height="' + BL + '"/>');
+  const b = st.bar;
+  o.push('<g transform="translate(' + st.x_car + ' ' + Y(ry) + ') rotate(' + (-A) + ')"><path class="bar" d="M0 ' + (-b.w / 2) + 'H' + b.len + 'V' + (b.w / 2) + 'H0Z M' +
+    b.slot_start + ' ' + (-SW / 2) + 'H' + b.slot_end + 'V' + (SW / 2) + 'H' + b.slot_start + 'Z"/><circle class="dot" r=".3"/></g>');
+  o.push('<circle class="pin' + (st.in_slot && st.inside ? '' : ' warn') + '" cx="' + pn.x + '" cy="' + Y(pn.y) + '" r="' + Math.max(SW / 2, 0.3) + '"/>');
+  o.push('<rect class="box' + (st.fit.ok ? '' : ' bad') + '" x="0" y="0" width="' + BOX + '" height="' + BOX + '"/>');
+  if (dims) {
+    o.push('<line class="dim" x1="0" y1="-1.2" x2="' + BOX + '" y2="-1.2"/><text class="dtext" x="' + (BOX / 2) + '" y="-1.6" text-anchor="middle">' + f2(BOX) + ' cm box</text>');
+    const ox = BOX - 1.0;
+    o.push('<line class="dim" x1="' + ox + '" y1="' + Y(cy) + '" x2="' + ox + '" y2="' + Y(ry) + '"/><text class="dtext" x="' + (ox - 0.3) + '" y="' + Y(ry + 2.8) + '" text-anchor="end">offset ' + f2(s.OFFSET) + '</text>');
+    o.push('<line class="dim" x1="' + st.xs + '" y1="' + (BOX + 1.4) + '" x2="' + st.xe + '" y2="' + (BOX + 1.4) + '"/><text class="dtext" x="' + ((st.xs + st.xe) / 2) +
+      '" y="' + (BOX + 2.6) + '" text-anchor="middle">stroke ' + f2(st.stroke) + ' cm · ' + f2(st.sweep_pct, 1) + ' %</text>');
+    o.push('<text class="dtext" x="' + (W + 0.5) + '" y="' + (W + 1.7) + '">disk R' + f2(R) + '</text>');
+    o.push('<text class="dtext" x="' + (cx - 0.6) + '" y="' + (Y(cy) - st.r - 0.5) + '" text-anchor="end">pin r ' + f2(st.r) + '</text>');
+    o.push('<text class="dtext" x="' + (BOX / 2) + '" y="' + (BOX + 4.6) + '" text-anchor="middle">disk centre ' + f2(cx) + ' , ' + f2(cy) + ' from the bottom-left corner</text>');
+  }
+  const svg = $('svg');
+  svg.setAttribute('viewBox', '-4 -3.5 ' + (BOX + 8) + ' ' + (BOX + 9.5));
+  svg.innerHTML = o.join('');
+}
+
+// ---- tables ----------------------------------------------------------
+function renderTables() {
+  if (!tb || !st) return;
+  const sel = st.r;
+  let h;
+  if (tab === 'dist') {
+    h = '<table><thead><tr><th>Distance</th><th>Slider travel</th><th>Stroke</th><th></th></tr></thead><tbody>' +
+      tb.rings.map(g => '<tr class="row' + (Math.abs(g.r - sel) < 1e-6 ? ' sel' : '') + '" data-r="' + g.r + '"><td>' + f2(g.r, 1) + ' cm</td><td>' + f2(g.pct, 1) +
+        ' %</td><td>' + f2(g.stroke) + ' cm</td><td>' + (g.ok ? '<span class="tag ok">fits</span>' : '<span class="tag no" title="' + esc(g.why) + '">no</span>') + '</td></tr>').join('') +
+      '</tbody></table>';
+  } else {
+    h = '<table><thead><tr><th>Slider travel</th><th>Distance</th><th>Stroke</th><th></th></tr></thead><tbody>' +
+      tb.pcts.map(g => '<tr class="row' + (Math.abs(g.r - sel) < 0.005 ? ' sel' : '') + '" data-r="' + g.r + '"><td>' + g.pct + ' %</td><td>' + f2(g.r) +
+        ' cm</td><td>' + f2(g.stroke) + ' cm</td><td>' + (g.ok ? '<span class="tag ok">fits</span>' : '<span class="tag no" title="' + esc(g.why) + '">no</span>') + '</td></tr>').join('') +
+      '</tbody></table>';
+  }
+  $('tbl').innerHTML = h;
+  $('tbl').querySelectorAll('tr.row').forEach(tr => tr.addEventListener('click', () => {
+    rVal = parseFloat(tr.dataset.r); tablesStale = true; schedule();
+  }));
+  $('build').textContent = tb.build;
+}
+
+// ---- settings panel --------------------------------------------------
+function buildSettings() {
+  const box = $('setgrid');
+  box.innerHTML = '';
+  for (const item of SET) {
+    const name = item[0], unit = item[1].split(/\s+/)[0];
+    const lab = document.createElement('label');
+    lab.className = 'f';
+    lab.innerHTML = esc(LABELS[name] || name) + '<div class="num"><input type="number" step="any" id="set_' + name + '" value="' + S[name] + '"><em>' + esc(unit) + '</em></div>';
+    box.appendChild(lab);
+    lab.querySelector('input').addEventListener('input', e => {
+      const v = parseFloat(e.target.value);
+      if (!isFinite(v)) return;
+      S[name] = v; save(); tablesStale = true; schedule();
+    });
+  }
+}
+
+// ---- wiring ----------------------------------------------------------
+$('rIn').addEventListener('input', () => {
+  const v = parseFloat($('rIn').value);
+  if (!(v > 0)) return;
+  rVal = v; tablesStale = true; schedule();
+});
+$('needIn').addEventListener('input', async () => {
+  const v = parseFloat($('needIn').value);
+  if (!(v > 0)) return;
+  try { const j = await getJSON('/api/convert', {kind: 'pct2r', value: v}); hideError(); rVal = j.r; tablesStale = true; schedule(); } catch (e) { showError(e); }
+});
+$('pctIn').addEventListener('input', () => {
+  const v = parseFloat($('pctIn').value);
+  if (!(v >= 0) || !st || !(st.sweep_pct > 0)) return;
+  pos = v / st.sweep_pct; schedule();
+});
+$('turnsIn').addEventListener('input', async () => {
+  const v = parseFloat($('turnsIn').value);
+  if (!(v >= 0) || !st || !(st.sweep_pct > 0)) return;
+  try { const j = await getJSON('/api/convert', {kind: 'turns2pct', value: v}); hideError(); pos = j.pct / st.sweep_pct; schedule(); } catch (e) { showError(e); }
+});
+$('scrub').addEventListener('input', () => { pos = $('scrub').value / 1000; schedule(); });
+for (const id of ['tDims', 'tRings', 'tGhosts']) $(id).addEventListener('change', draw);
+$('autoR').addEventListener('click', () => { rVal = null; tablesStale = true; schedule(); });
+$('resetSet').addEventListener('click', () => {
+  S = Object.assign({}, BOOT.defaults); save(); buildSettings(); rVal = null; tablesStale = true; schedule();
+});
+$('copyBuild').addEventListener('click', () => {
+  if (tb && navigator.clipboard) navigator.clipboard.writeText(tb.build);
+});
+document.querySelectorAll('.tabs button').forEach(btn => btn.addEventListener('click', () => {
+  tab = btn.dataset.tab;
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === btn));
+  renderTables();
+}));
+
+buildSettings();
+schedule();
+})();
+</script>
+</body>
+</html>
